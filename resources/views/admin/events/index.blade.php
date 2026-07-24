@@ -32,11 +32,7 @@
                             {{ $events->firstItem() + $index }}
                         </td>
                         <td class="px-8 py-6">
-                            @if($event->poster_path)
-                                <img src="{{ asset('storage/' . $event->poster_path) }}" class="w-16 h-20 rounded-xl object-cover shadow-sm" alt="Poster">
-                            @else
-                                <img src="https://placehold.co/160x200?text=No+Image" class="w-16 h-20 rounded-xl object-cover shadow-sm">
-                            @endif
+                            <img src="{{ $event->poster_url }}" class="w-16 h-20 rounded-xl object-cover shadow-sm" alt="{{ $event->title }}">
                         </td>
                         <td class="px-8 py-6">
                             <p class="font-black text-slate-800">{{ $event->title }}</p>
@@ -84,5 +80,4 @@
     <div class="px-8 py-6 bg-slate-50/50 border-t">
         {{ $events->links() }}
     </div>
-</div>
 @endsection

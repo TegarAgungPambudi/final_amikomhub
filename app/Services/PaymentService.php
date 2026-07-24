@@ -6,6 +6,7 @@ use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Transaction;
 use App\Models\Transaction as TransactionModel;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PaymentService
@@ -29,14 +30,25 @@ class PaymentService
     /**
      * Generate Snap Token untuk payment UI
      */
-    public function createSnapToken(TransactionModel $transaction)
+    public function createSnapToken(TransactionModel $transaction, string $paymentMethod = 'qris')
     {
         try {
             if ($this->isDemo) {
-                // Demo mode: return mock token
+                // Demo mode: return mock token. In demo mode, the selected payment method is simulated by the front-end.
                 $mockToken = 'DEMO-' . Str::random(20);
                 $transaction->update(['snap_token' => $mockToken]);
                 return $mockToken;
+            }
+
+            $quantity = (int) ($transaction->quantity ?? 1);
+            $serviceFee = 5000;
+            $originalTotal = (int) ($transaction->original_price ?? ($transaction->event->price * $quantity));
+            $discountAmount = (int) ($transaction->discount_amount ?? 0);
+            $ticketTotal = max(0, $originalTotal - $discountAmount);
+
+            $enabledPayments = ['qris'];
+            if ($paymentMethod === 'va') {
+                $enabledPayments = ['bca_va', 'bni_va', 'bri_va', 'permata_va'];
             }
 
             $params = [
@@ -52,11 +64,20 @@ class PaymentService
                 'item_details' => [
                     [
                         'id' => $transaction->event->id,
-                        'price' => $transaction->event->price,
+                        'price' => $ticketTotal,
                         'quantity' => 1,
-                        'name' => $transaction->event->title,
-                    ]
+                        'name' => $quantity > 1
+                            ? $transaction->event->title . ' x' . $quantity
+                            : $transaction->event->title,
+                    ],
+                    [
+                        'id' => 'SERVICE_FEE',
+                        'price' => $serviceFee,
+                        'quantity' => 1,
+                        'name' => 'Biaya Admin',
+                    ],
                 ],
+                'enabled_payments' => $enabledPayments,
             ];
 
             $snapToken = Snap::getSnapToken($params);
@@ -64,7 +85,7 @@ class PaymentService
             
             return $snapToken;
         } catch (\Exception $e) {
-            \Log::error('Snap token creation failed: ' . $e->getMessage());
+            Log::error('Snap token creation failed: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -86,9 +107,48 @@ class PaymentService
 
             return Transaction::status($orderId);
         } catch (\Exception $e) {
-            \Log::error('Check transaction status failed: ' . $e->getMessage());
+            Log::error('Check transaction status failed: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Normalisasi status dari Midtrans ke status lokal yang dipakai aplikasi.
+     */
+    public function normalizeStatus($transactionStatus = null, $fraudStatus = null): string
+    {
+        $transactionStatusValue = $this->extractStatusValue($transactionStatus, 'transaction_status');
+        $fraudStatusValue = $this->extractStatusValue($fraudStatus, 'fraud_status');
+
+        $transactionStatusValue = strtolower((string) ($transactionStatusValue ?? ''));
+        $fraudStatusValue = strtolower((string) ($fraudStatusValue ?? ''));
+
+        if (in_array($transactionStatusValue, ['capture', 'settlement'], true)) {
+            return $fraudStatusValue === 'challenge' ? 'pending' : 'settlement';
+        }
+
+        if ($transactionStatusValue === 'pending') {
+            return 'pending';
+        }
+
+        if (in_array($transactionStatusValue, ['deny', 'cancel', 'expire', 'failure', 'failed'], true)) {
+            return 'failed';
+        }
+
+        return 'pending';
+    }
+
+    protected function extractStatusValue($payload, string $key)
+    {
+        if (is_array($payload)) {
+            return $payload[$key] ?? null;
+        }
+
+        if (is_object($payload)) {
+            return $payload->{$key} ?? null;
+        }
+
+        return $payload;
     }
 
     /**
@@ -105,15 +165,13 @@ class PaymentService
 
             $transactionStatus = $notificationData['transaction_status'];
             $fraudStatus = $notificationData['fraud_status'] ?? null;
+            $normalizedStatus = $this->normalizeStatus($transactionStatus, $fraudStatus);
 
-            // Update status berdasarkan response Midtrans
-            if ($transactionStatus === 'capture' && $fraudStatus === 'accept') {
+            if ($normalizedStatus === 'settlement') {
                 $transaction->update(['status' => 'settlement']);
-            } elseif ($transactionStatus === 'settlement') {
-                $transaction->update(['status' => 'settlement']);
-            } elseif ($transactionStatus === 'pending') {
+            } elseif ($normalizedStatus === 'pending') {
                 $transaction->update(['status' => 'pending']);
-            } elseif ($transactionStatus === 'deny' || $transactionStatus === 'cancel' || $transactionStatus === 'expire') {
+            } else {
                 $transaction->update(['status' => 'failed']);
             }
 
@@ -123,7 +181,7 @@ class PaymentService
                 'transaction' => $transaction
             ];
         } catch (\Exception $e) {
-            \Log::error('Webhook handling failed: ' . $e->getMessage());
+            Log::error('Webhook handling failed: ' . $e->getMessage());
             return [
                 'success' => false,
                 'message' => $e->getMessage()

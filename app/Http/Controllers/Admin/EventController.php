@@ -14,8 +14,14 @@ class EventController extends Controller
      */
     public function index()
     {
-        // Memakai relasi dan pengaturan limit paginasi (10 entri per halaman)
-        $events = \App\Models\Event::with('category')->latest()->paginate(10);
+        $query = \App\Models\Event::with('category');
+
+        // Multi-tenant: organizer hanya lihat event milik organisasinya
+        if (auth()->user()->isOrganizer()) {
+            $query->where('organization_id', auth()->user()->organization_id);
+        }
+
+        $events = $query->latest()->paginate(10);
         return view('admin.events.index', compact('events'));
     }
 
@@ -25,7 +31,8 @@ class EventController extends Controller
     public function create()
     {
         $categories = \App\Models\Category::all();
-        return view('admin.events.create', compact('categories'));
+        $organizations = \App\Models\Organization::all();
+        return view('admin.events.create', compact('categories', 'organizations'));
     }
 
     /**
@@ -33,37 +40,38 @@ class EventController extends Controller
      */
     public function store(Request $request)
     {
-        // Menerapkan validasi data request dari pengguna
         $data = $request->validate([
             'category_id' => 'required|exists:categories,id',
-            'title' => 'required|string|max:255|unique:events,title',
-            'description' => 'required|string|min:10',
-            'date' => 'required|date|after:today',
+            'organization_id' => 'nullable|exists:organizations,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'date' => 'required|date',
             'location' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:1',
-            'poster' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'stock' => 'required|numeric|min:1',
+            'poster' => 'nullable|image|max:2048',
         ]);
 
-        // Handle file upload untuk poster
-        if ($request->hasFile('poster')) {
-            $file = $request->file('poster');
-            $path = $file->store('events', 'public');
-            $data['poster_path'] = $path;
+        // Auto-assign organization for organizer
+        if (!$request->filled('organization_id') && auth()->user()->isOrganizer()) {
+            $data['organization_id'] = auth()->user()->organization_id;
         }
 
-        // Menyimpan data yang telah divalidasi ke dalam tabel menggunakan Model
+        if ($request->hasFile('poster')) {
+            $data['poster_path'] = $request->file('poster')->store('posters', 'public');
+        }
+
         Event::create($data);
+
         return redirect()->route('admin.events.index')->with('success', 'Data Event berhasil ditambahkan.');
- }
-    
+    }
 
     /**
      * Display the specified resource.
      */
     public function show(Event $event)
     {
-        //
+        // not used (admin uses edit/update/destroy)
     }
 
     /**
@@ -72,7 +80,8 @@ class EventController extends Controller
     public function edit(Event $event)
     {
         $categories = \App\Models\Category::all();
-        return view('admin.events.edit', compact('event', 'categories'));
+        $organizations = \App\Models\Organization::all();
+        return view('admin.events.edit', compact('event', 'categories', 'organizations'));
     }
 
     /**
@@ -82,29 +91,32 @@ class EventController extends Controller
     {
         $data = $request->validate([
             'category_id' => 'required|exists:categories,id',
-            'title' => 'required|string|max:255|unique:events,title,' . $event->id,
-            'description' => 'required|string|min:10',
+            'organization_id' => 'nullable|exists:organizations,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'date' => 'required|date',
             'location' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:1',
-            'poster' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'stock' => 'required|numeric|min:1',
+            'poster' => 'nullable|image|max:2048',
         ]);
 
-        // Handle file upload untuk poster
+        // Organizer only can edit their own events
+        if (auth()->user()->isOrganizer()) {
+            unset($data['organization_id']);
+        }
+
         if ($request->hasFile('poster')) {
-            // Hapus file lama jika ada
-            if ($event->poster_path && Storage::disk('public')->exists($event->poster_path)) {
+            if ($event->poster_path) {
                 Storage::disk('public')->delete($event->poster_path);
             }
-            
-            $file = $request->file('poster');
-            $path = $file->store('events', 'public');
-            $data['poster_path'] = $path;
+
+            $data['poster_path'] = $request->file('poster')->store('posters', 'public');
         }
 
         $event->update($data);
-        return redirect()->route('admin.events.index')->with('success', 'Data event berhasil diperbarui.');
+
+        return redirect()->route('admin.events.index')->with('success', 'Event berhasil diperbarui.');
     }
 
     /**
@@ -112,12 +124,12 @@ class EventController extends Controller
      */
     public function destroy(Event $event)
     {
-        // Hapus file poster jika ada
-        if ($event->poster_path && Storage::disk('public')->exists($event->poster_path)) {
+        if ($event->poster_path) {
             Storage::disk('public')->delete($event->poster_path);
         }
 
         $event->delete();
-        return redirect()->route('admin.events.index')->with('success', 'Data event berhasil dihapus secara permanen.');
+
+        return redirect()->route('admin.events.index')->with('success', 'Data Event berhasil dihapus secara permanen.');
     }
 }

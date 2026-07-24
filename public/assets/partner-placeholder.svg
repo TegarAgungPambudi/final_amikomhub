@@ -1,0 +1,9 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" rx="24" fill="#FFF7ED"/>
+  <rect x="28" y="28" width="144" height="144" rx="32" fill="#FFEDD5"/>
+  <circle cx="100" cy="88" r="28" fill="#FB923C" fill-opacity="0.18"/>
+  <path d="M76 126C82.5 113 93.1 106 100 106C106.9 106 117.5 113 124 126" stroke="#F97316" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="88" cy="86" r="5" fill="#F97316"/>
+  <circle cx="112" cy="86" r="5" fill="#F97316"/>
+  <text x="100" y="156" text-anchor="middle" fill="#C2410C" font-family="Arial, sans-serif" font-size="16" font-weight="700">Partner</text>
+</svg>

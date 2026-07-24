@@ -55,7 +55,8 @@
                         <td class="px-8 py-6 font-bold text-slate-400">{{ ($partners->currentPage() - 1) * $partners->perPage() + $index + 1 }}</td>
                         <td class="px-8 py-6">
                             <img src="{{ $partner->logo_url }}" alt="{{ $partner->name }}" 
-                                 class="w-16 h-16 rounded-xl object-cover shadow-sm bg-slate-100">
+                                 class="w-16 h-16 rounded-xl object-contain shadow-sm bg-slate-100 p-1"
+                                 onerror="this.onerror=null;this.src='{{ asset('assets/partner-placeholder.svg') }}'">
                         </td>
                         <td class="px-8 py-6">
                             <p class="font-black text-slate-800">{{ $partner->name }}</p>

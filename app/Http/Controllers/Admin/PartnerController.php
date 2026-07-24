@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Partner;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PartnerController extends Controller
 {
@@ -39,8 +40,13 @@ class PartnerController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'logo_url' => 'nullable|url|max:255'
+            'logo' => 'nullable|image|max:2048|required_without:logo_url',
+            'logo_url' => 'nullable|url|max:255|required_without:logo'
         ]);
+
+        if ($request->hasFile('logo')) {
+            $data['logo_url'] = $request->file('logo')->store('partners', 'public');
+        }
 
         Partner::create($data);
         return redirect()->route('admin.partners.index')->with('success', 'Partner berhasil ditambahkan!');
@@ -69,11 +75,21 @@ class PartnerController extends Controller
     public function update(Request $request, string $id)
     {
         $partner = Partner::findOrFail($id);
+        $oldLogo = $partner->getRawOriginal('logo_url');
 
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'logo_url' => 'nullable|url|max:255'
+            'logo' => 'nullable|image|max:2048|required_without:logo_url',
+            'logo_url' => 'nullable|url|max:255|required_without:logo'
         ]);
+
+        if ($request->hasFile('logo')) {
+            if ($oldLogo && !filter_var($oldLogo, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($oldLogo)) {
+                Storage::disk('public')->delete($oldLogo);
+            }
+
+            $data['logo_url'] = $request->file('logo')->store('partners', 'public');
+        }
 
         $partner->update($data);
 

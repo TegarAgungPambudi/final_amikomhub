@@ -14,7 +14,7 @@
     </header>
 
     <div class="max-w-2xl bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-10">
-        <form action="{{ route('admin.partners.update', $partner->id) }}" method="POST" class="space-y-8">
+        <form action="{{ route('admin.partners.update', $partner->id) }}" method="POST" class="space-y-8" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
@@ -34,19 +34,36 @@
                 @enderror
             </div>
 
+            <!-- Input Logo File -->
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-3">
+                    Upload Logo
+                </label>
+                <input type="file" 
+                       name="logo" 
+                       accept="image/*"
+                       class="w-full px-5 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                       >
+                <p class="text-slate-500 text-sm mt-2">
+                    Upload file baru jika ingin mengganti logo yang sudah ada.
+                </p>
+                @error('logo')
+                    <p class="text-red-600 text-sm mt-2">{{ $message }}</p>
+                @enderror
+            </div>
+
             <!-- Input URL Logo -->
             <div>
                 <label class="block text-sm font-bold text-slate-700 mb-3">
-                    URL Logo <span class="text-red-600">*</span>
+                    URL Logo
                 </label>
                 <input type="url" 
                        name="logo_url" 
                        value="{{ old('logo_url', $partner->logo_url) }}"
                        class="w-full px-5 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                       placeholder="https://placehold.co/200x200"
-                       required>
+                       placeholder="https://placehold.co/200x200">
                 <p class="text-slate-500 text-sm mt-2">
-                    💡 Tip: Gunakan layanan seperti <code class="bg-slate-100 px-2 py-1 rounded">https://placehold.co/200x200</code> untuk logo placeholder
+                    Isi URL jika logo disimpan di luar server.
                 </p>
                 @error('logo_url')
                     <p class="text-red-600 text-sm mt-2">{{ $message }}</p>
@@ -56,8 +73,8 @@
             <!-- Preview Logo -->
             <div>
                 <label class="block text-sm font-bold text-slate-700 mb-3">Preview Logo</label>
-                <div id="logo-preview" class="w-32 h-32 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center bg-slate-50">
-                    <img src="{{ $partner->logo_url }}" alt="{{ $partner->name }}" class="w-full h-full object-cover rounded-xl">
+                <div id="logo-preview" class="w-32 h-32 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center bg-slate-50 overflow-hidden">
+                    <img src="{{ $partner->logo_url }}" alt="{{ $partner->name }}" class="w-full h-full object-contain rounded-xl p-2" onerror="this.onerror=null;this.src='{{ asset('assets/partner-placeholder.svg') }}'">
                 </div>
             </div>
 
@@ -77,16 +94,43 @@
 </main>
 
 <script>
-    // Live preview untuk logo
     const logoInput = document.querySelector('input[name="logo_url"]');
+    const fileInput = document.querySelector('input[name="logo"]');
     const logoPreview = document.getElementById('logo-preview');
+    const fallbackLogo = '{{ asset('assets/partner-placeholder.svg') }}';
+
+    function renderImage(src) {
+        logoPreview.innerHTML = `<img src="${src}" alt="Preview" class="w-full h-full object-contain rounded-xl p-2" onerror="this.onerror=null;this.src='${fallbackLogo}'">`;
+    }
 
     logoInput.addEventListener('input', function() {
         if (this.value) {
-            logoPreview.innerHTML = `<img src="${this.value}" alt="Preview" class="w-full h-full object-cover rounded-xl">`;
+            renderImage(this.value);
         } else {
-            logoPreview.innerHTML = '<span class="text-slate-400 text-sm text-center">Preview akan muncul di sini</span>';
+            logoPreview.innerHTML = `<img src="{{ $partner->logo_url }}" alt="{{ $partner->name }}" class="w-full h-full object-contain rounded-xl p-2" onerror="this.onerror=null;this.src='${fallbackLogo}'">`;
         }
+    });
+
+    fileInput.addEventListener('change', function() {
+        const file = this.files && this.files[0];
+
+        if (file) {
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                renderImage(event.target.result);
+            };
+
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        if (logoInput.value) {
+            renderImage(logoInput.value);
+            return;
+        }
+
+        logoPreview.innerHTML = `<img src="{{ $partner->logo_url }}" alt="{{ $partner->name }}" class="w-full h-full object-contain rounded-xl p-2" onerror="this.onerror=null;this.src='${fallbackLogo}'">`;
     });
 </script>
 @endsection

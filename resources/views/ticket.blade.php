@@ -15,7 +15,7 @@
     </style>
 </head>
 
-<body class="bg-indigo-600 text-white min-h-screen flex items-center justify-center p-6">
+<body class="bg-orange-600 text-white min-h-screen flex items-center justify-center p-6">
 
     <div class="max-w-md w-full">
         <!-- Success Banner -->
@@ -27,19 +27,19 @@
                 </svg>
             </div>
             <h1 class="text-3xl font-black">Pembayaran Berhasil!</h1>
-            <p class="text-indigo-100 mt-2">Tiket Anda telah terbit dan siap digunakan.</p>
+            <p class="text-orange-100 mt-2">Tiket Anda telah terbit dan siap digunakan.</p>
         </div>
 
         <!-- Ticket Card -->
         <div class="bg-white text-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl relative">
             <!-- Ticket Header -->
-            <div class="p-8 bg-indigo-50 border-b-4 border-dashed border-indigo-100 text-center relative">
-                <p class="text-indigo-600 font-bold uppercase tracking-widest text-xs mb-2">E-Ticket Resmi</p>
+            <div class="p-8 bg-orange-50 border-b-4 border-dashed border-orange-100 text-center relative">
+<p class="text-orange-600 font-bold uppercase tracking-widest text-xs mb-2">E-Ticket Resmi</p>
                 <h2 class="text-2xl font-black leading-tight">{{ $transaction->event->title ?? 'Event' }}</h2>
 
                 <!-- Ticket Side Cuts -->
-                <div class="absolute -left-4 -bottom-4 w-8 h-8 bg-indigo-600 rounded-full"></div>
-                <div class="absolute -right-4 -bottom-4 w-8 h-8 bg-indigo-600 rounded-full"></div>
+                <div class="absolute -left-4 -bottom-4 w-8 h-8 bg-orange-500 rounded-full"></div>
+                <div class="absolute -right-4 -bottom-4 w-8 h-8 bg-orange-500 rounded-full"></div>
             </div>
 
             <!-- Ticket Body -->
@@ -63,20 +63,25 @@
                     </div>
                 </div>
 
-                <div class="bg-slate-100 p-6 rounded-3xl flex flex-col items-center">
+<div class="bg-slate-100 p-6 rounded-3xl flex flex-col items-center">
                     <p class="text-slate-400 text-xs font-bold uppercase mb-4">Scan QR untuk Check-in</p>
 
                     @php
                         $qrPayload = isset($transaction) && $transaction ? (string) $transaction->order_id : 'TICKET-INVALID';
+                        try {
+                            $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                                ->size(200)
+                                ->margin(2)
+                                ->errorCorrection('M')
+                                ->generate($qrPayload);
+                        } catch (\Exception $e) {
+                            $qrSvg = '<p style="text-align:center;color:#999;">QR Error</p>';
+                        }
                     @endphp
 
-                    <div class="w-48 h-48 bg-white p-4 rounded-xl shadow-inner flex items-center justify-center">
+                    <div class="w-48 h-48 bg-white p-2 rounded-xl shadow-inner flex items-center justify-center">
                         <div class="w-full h-full flex items-center justify-center">
-                            <img
-                                alt="QR Ticket"
-                                class="w-40 h-40"
-                                src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={{ urlencode($qrPayload) }}"
-                            />
+                            {!! $qrSvg !!}
                         </div>
                     </div>
 
@@ -86,11 +91,11 @@
 
             <div class="px-8 pb-8">
                 <button onclick="window.print()"
-                    class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition">
+                    class="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold shadow-lg hover:bg-orange-600 transition">
                     Cetak / Simpan PDF
                 </button>
                 <a href="/"
-                    class="block text-center mt-4 text-slate-500 font-bold hover:text-indigo-600">Kembali ke Beranda</a>
+                    class="block text-center mt-4 text-slate-500 font-bold hover:text-orange-600">Kembali ke Beranda</a>
             </div>
         </div>
     </div>

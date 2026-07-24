@@ -45,7 +45,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-slate-600">Event</span>
-                <span class="font-bold">{{ $transaction->event->title }}</span>
+                <span class="font-bold">{{ $transaction->event?->title ?? 'Event tidak tersedia' }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-slate-600">Nama Pemesan</span>
@@ -61,7 +61,7 @@
             </div>
             <div class="flex justify-between pt-4 border-t">
                 <span class="text-slate-600">Total Bayar</span>
-                <span class="font-bold text-indigo-600 text-lg">Rp {{ number_format($transaction->total_price, 0, ',', '.') }}</span>
+                <span class="font-bold text-orange-600 text-lg">Rp {{ number_format($transaction->total_price, 0, ',', '.') }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-slate-600">Status</span>
@@ -77,11 +77,11 @@
 
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="{{ route('ticket', ['transaction_id' => $transaction->id]) }}"
-               class="inline-block px-8 py-4 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-2xl font-bold hover:bg-indigo-100 transition">
+               class="inline-block px-8 py-4 bg-orange-50 text-orange-700 border border-orange-200 rounded-2xl font-bold hover:bg-orange-100 transition">
                 Buka E-Tiket
             </a>
 
-            <a href="{{ route('home') }}" class="inline-block px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition">
+            <a href="{{ route('home') }}" class="inline-block px-8 py-4 bg-orange-500 text-white rounded-2xl font-bold hover:bg-orange-600 transition">
                 Kembali ke Homepage
             </a>
         </div>

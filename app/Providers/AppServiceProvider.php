@@ -22,5 +22,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Transaction::observe(TransactionObserver::class);
+
+        // Share categories with app layout for footer/menu
+        view()->composer('layouts.app', function ($view) {
+            $view->with('categories', \App\Models\Category::all());
+        });
     }
 }
