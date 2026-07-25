@@ -49,5 +49,23 @@ Add a cron job in alwaysdata to run Laravel scheduler every minute:
 ## 9. Notes
 - Keep secrets out of the repo. Use the alwaysdata environment panel or `.env` on the server.
 - If you prefer HTTPS git pushes, make sure your account can authenticate with a PAT when pushing from local.
-
 If you want, I can also create a `.env.production` template (without secrets) and add deployment scripts.
+
+## 10. Optional: Automatic deploy from GitHub
+
+You can configure a GitHub Actions workflow that deploys to alwaysdata whenever you push to the `FP_Amikom_Hub` branch. Steps:
+
+1. Add your public SSH key to alwaysdata (Account → SSH keys).
+2. In this repository on GitHub, open `Settings → Secrets and variables → Actions` and add the following secrets:
+	- `ALWAYSDATA_HOST`: your server host (example: ssh.alwaysdata.com or the host shown in your panel)
+	- `ALWAYSDATA_USER`: your alwaysdata username
+	- `ALWAYSDATA_SSH_KEY`: the private SSH key (PEM/openssh) corresponding to the public key you added to alwaysdata
+	- `ALWAYSDATA_PORT` (optional, default 22)
+
+3. The repository already includes a workflow at `.github/workflows/deploy.yml` which will run on push to `FP_Amikom_Hub` and execute the deploy script remotely.
+
+Notes:
+- Ensure the server has `git`, `php`, and `composer` installed and available in PATH.
+- The workflow uses SSH deploy; keep the private key secret and never commit it.
+- You can also run `scripts/deploy.sh` manually on the server.
+

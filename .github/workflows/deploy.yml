@@ -1,0 +1,46 @@
+name: Deploy to alwaysdata
+
+on:
+  push:
+    branches:
+      - FP_Amikom_Hub
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to alwaysdata
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.ALWAYSDATA_HOST }}
+          username: ${{ secrets.ALWAYSDATA_USER }}
+          key: ${{ secrets.ALWAYSDATA_SSH_KEY }}
+          port: ${{ secrets.ALWAYSDATA_PORT || '22' }}
+          script: |
+            set -e
+            REPO_DIR="$HOME/final_amikomhub"
+            BRANCH="FP_Amikom_Hub"
+            if [ -d "$REPO_DIR" ]; then
+              cd "$REPO_DIR"
+              git fetch origin "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+            else
+              git clone -b "$BRANCH" git@github.com:TegarAgungPambudi/final_amikomhub.git "$REPO_DIR"
+              cd "$REPO_DIR"
+            fi
+            composer install --no-dev --optimize-autoloader
+            if [ ! -f .env ]; then
+              if [ -f .env.example ]; then
+                cp .env.example .env
+              fi
+            fi
+            php artisan key:generate --force || true
+            php artisan migrate --force || true
+            php artisan storage:link || true
+            chmod -R 775 storage bootstrap/cache || true
+            php artisan config:cache || true
+            php artisan route:cache || true
+            php artisan view:cache || true
